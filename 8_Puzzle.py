@@ -248,6 +248,7 @@ class BestFirst(Search):
                 for i in range(len(path)-1, 0, -1):
                     print(path[i], ' --> ', sep='', end='')
                 print(path[0], sep='')
+                print("The number of nodes explored is:", len(visited))
                 return visited
             for node in Frontier(lowCost).locations():
                 if ''.join(node.state) not in visited:
@@ -263,8 +264,9 @@ if __name__ == '__main__':
     ######################################################################################################
     # Instructions to run:                                                                               #
     # 1. Create a root node with a 1d 8- or 15-puzzle. In order to minimize confusion with double digits,#
-    # pass in an array of chars.                                                                         #
+    # pass in an array of chars. If you're running the 8-puzzle, you can use a string                    #
     #            example: Node(['1','2','3','4','5','6','7','8','b'])                                    #
+    #            example: Node('12345678b')                                                              #
     #                                                                                                    #
     # 2. Wrap the Node with the search algorithm (Your choices are 'A_', 'BestFirst', and '__________')  #
     #            example: BestFirst(Node(['1','2','3','4','5','6','7','8','b']))                         #
@@ -276,9 +278,9 @@ if __name__ == '__main__':
     ######################################################################################################
     # The return value is an array containing all visited nodes. Internally, the function will print     #
     # the path it took to get to the goal and the number of states explored OR it will display some      #
-    # kind of error message.                                                                                     #
+    # kind of error message.                                                                             #
     ######################################################################################################
 
-    # BestFirst(Node('513b27684')).search(1000)
+    # BestFirst(Node('1234567b8')).search(1000)
     # BestFirst(Node(['1', '2', '3', '4', '5', '6', '7', '8',
     #                '9', 'b', '15', '11', '13', '10', '14', '12'])).search(1000)
