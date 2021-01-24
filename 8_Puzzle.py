@@ -36,8 +36,9 @@ class Frontier:
         # Rows creates the board in 2d, this will make it easier to find allowable moves
         self.rows = self.twoDBoard()
 
-    ##### locations() returns a list containing all the nodes of possible movement #####
-    def locations(self):
+    # locations() returns a list containing all the nodes of possible movement
+    # The input is the cost function we're going to use
+    def locations(self, costFunc):
         frontierList = []
         # Top
         topx = self.x - 1
@@ -56,7 +57,7 @@ class Frontier:
 
             topBoard = self.flatBoard(self.rows)
             top = Node(topBoard, self.parent, 'top',
-                       self.correctSpaceCost(topBoard))
+                       costFunc(topBoard, self.dimension))
 
             # undo changes
             self.rows[topx][self.y] = self.rows[self.x][self.y]
@@ -70,7 +71,7 @@ class Frontier:
 
             botBoard = self.flatBoard(self.rows)
             bot = Node(botBoard, self.parent, 'bot',
-                       self.correctSpaceCost(botBoard))
+                       costFunc(botBoard, self.dimension))
 
             self.rows[botx][self.y] = self.rows[self.x][self.y]
             self.rows[self.x][self.y] = 'b'
@@ -82,7 +83,7 @@ class Frontier:
 
             rightBoard = self.flatBoard(self.rows)
             right = Node(rightBoard, self.parent, 'right',
-                         self.correctSpaceCost(rightBoard))
+                         costFunc(rightBoard, self.dimension))
 
             self.rows[self.x][righty] = self.rows[self.x][self.y]
             self.rows[self.x][self.y] = 'b'
@@ -94,7 +95,7 @@ class Frontier:
 
             leftBoard = self.flatBoard(self.rows)
             left = Node(leftBoard, self.parent, 'left',
-                        self.correctSpaceCost(leftBoard))
+                        costFunc(leftBoard, self.dimension))
 
             self.rows[self.x][lefty] = self.rows[self.x][self.y]
             self.rows[self.x][self.y] = 'b'
@@ -103,11 +104,14 @@ class Frontier:
         return frontierList
 
     def getBlankLocation(self):
+        x = -1
         for i in range(0, len(self.parent.state)):
             if self.parent.state[i] == 'b':
                 x = i // self.dimension
                 y = i % self.dimension
                 break
+        if x == -1:
+            raise Exception("No blank tile found")
         return (x, y)
 
     def twoDBoard(self):
@@ -121,21 +125,17 @@ class Frontier:
             flat += i
         return flat
 
-    # correctSpaceCost() gives a cost based on the number of tiles in the correct space, the goal is '12345678b'
-    def correctSpaceCost(self, board):
-        cost = 0
-        goal = [i for i in range(1, self.dimension*self.dimension)] + ['b']
-        for i in range(0, self.dimension*self.dimension):
-            if goal[i] != board[i]:
-                cost += 1
-        return cost
-
 
 ########################################################################################
 # The search class defines the basic search functions
 ########################################################################################
 class Search:
     def __init__(self, startState):
+        # this is only good for 8-puzzle and 15 puzzle
+        if len(startState.state) == 9:
+            self.dimension = 3
+        else:
+            self.dimension = 4
         self.root = startState
 
     # Given a board, startState, return bool for whether or not it's solvable
@@ -175,20 +175,6 @@ class Search:
             print("Puzzle is not an 8-puzzle nor 15-puzzle")
             return False
 
-
-########################################################################################
-# The BestFirst class is derived from search. BestFirst algorithm
-########################################################################################
-class BestFirst(Search):
-    def __init__(self, startState):
-        super().__init__(startState)
-        # this is only good for 8-puzzle and 15 puzzle
-        if len(startState.state) == 9:
-            self.dimension = 3
-        else:
-            self.dimension = 4
-        self.nodeQueue = Frontier(startState).locations()
-
     # Returns true if we're in the goal state. False otherwise
     def goalStateCheck(self, board):
         goal = [str(i) for i in range(
@@ -198,13 +184,7 @@ class BestFirst(Search):
                 return False
         return True
 
-    def search(self, moveLimit):
-        if not self.isSolvable():
-            print("This board does not have a solution")
-            return
-        return self.privSearch(self.root, moveLimit)
-
-    def privSearch(self, root, moveLimit):
+    def privSearch(self, root, moveLimit, costFunc):
         visited = [self.root.state]
         if self.goalStateCheck(root.state):
             currentRoot = root
@@ -215,6 +195,7 @@ class BestFirst(Search):
             path.append(self.root.state)
             for i in path[::-1]:
                 print(i)
+            print("The number of nodes along the path is:", len(path))
             print("The number of nodes explored is:", len(visited))
             return visited
         # Up until here is basically to check if our starting state IS the goal state
@@ -248,15 +229,93 @@ class BestFirst(Search):
                 for i in range(len(path)-1, 0, -1):
                     print(path[i], ' --> ', sep='', end='')
                 print(path[0], sep='')
+                print("The number of nodes along the path is:", len(path))
                 print("The number of nodes explored is:", len(visited))
                 return visited
-            for node in Frontier(lowCost).locations():
+            for node in Frontier(lowCost).locations(costFunc):
                 if ''.join(node.state) not in visited:
                     self.nodeQueue += [node]
             moveLimit -= 1
 
         print("Solution was not found within 1000 actions")
         return visited
+
+
+########################################################################################
+# The BestFirst class is derived from Search. BestFirst algorithm
+########################################################################################
+class BestFirst(Search):
+    def __init__(self, startState):
+        super().__init__(startState)
+        self.nodeQueue = Frontier(startState).locations(self.correctSpaceCost)
+
+    def search(self, moveLimit):
+        if not self.isSolvable():
+            print("This board does not have a solution")
+            return
+        return self.privSearch(self.root, moveLimit, self.correctSpaceCost)
+
+    # correctSpaceCost() gives a cost based on the number of tiles in the correct space, the goal is '12345678b'
+    @staticmethod
+    def correctSpaceCost(board, dimension):
+        cost = 0
+        goal = [i for i in range(1, dimension*dimension)] + ['b']
+        for i in range(0, dimension*dimension):
+            if goal[i] != board[i]:
+                cost += 1
+        return cost
+
+
+########################################################################################
+# The AStar class is derived from Search. A* algorithm has a different costFunction
+########################################################################################
+class AStar(Search):
+    def __init__(self, startState):
+        super().__init__(startState)
+
+        self.nodeQueue = Frontier(startState).locations(self.sumCost)
+
+    # in the BestFirst algorithm, I defined the cost as the number of non-matching tiles
+    # so I have to create a different one here. costToGoal() adds up the distance between
+    # every tile's current position and goal position
+    #  1  2  3
+    #  4  b  6  has a cost of 4, because 'b' is 2 spaces away from the bottom right
+    #  7  8  5  and 5 is also 2 spaces away from the middle
+    def costToGoal(self, board):
+        cost = 0
+
+        goalPositions = {}
+        x, y = 0, 0
+        for i in range(0, (self.dimension * self.dimension)):
+            goalPositions[str(i)] = (x, y)
+            y += 1
+            if y == self.dimension:
+                x += 1
+                y = 0
+        goalPositions['b'] = (self.dimension-1, self.dimension-1)
+
+        boardArray = []
+        for i in range(self.dimension):
+            boardArray.append(
+                board[i*self.dimension:i*self.dimension+self.dimension])
+
+        for x in range(0, self.dimension):
+            for y in range(0, self.dimension):
+                goal = goalPositions[str(boardArray[x][y])]
+                delx = abs(x-goal[0])
+                dely = abs(y-goal[1])
+                cost += (delx + dely)
+        return cost
+
+    # returns total cost, sum of BestFirst and A* cost functions
+    def sumCost(self, board, dimension):
+        return BestFirst.correctSpaceCost(board, dimension) + self.costToGoal(board)
+
+    def search(self, moveLimit):
+        if not self.isSolvable():
+            print("This board does not have a solution")
+            return
+        return self.privSearch(self.root, moveLimit, self.sumCost)
 
 
 if __name__ == '__main__':
@@ -281,6 +340,7 @@ if __name__ == '__main__':
     # kind of error message.                                                                             #
     ######################################################################################################
 
-    # BestFirst(Node('1234567b8')).search(1000)
+    BestFirst(Node('1234b6758')).search(1000)
+    AStar(Node('1234b6758')).search(1000)
     # BestFirst(Node(['1', '2', '3', '4', '5', '6', '7', '8',
     #                '9', 'b', '15', '11', '13', '10', '14', '12'])).search(1000)
