@@ -31,10 +31,7 @@ class Frontier:
 
         self.parent = inputState
         # Find location of the blank space in 2d
-        for i in range(0, len(inputState.state)):
-            if inputState.state[i] == 'b':
-                self.x = i // 3
-                self.y = i % 3
+        self.x, self.y = self.getBlankLocation()
 
         # Rows creates the board in 2d, this will make it easier to find allowable moves
         self.rows = self.twoDBoard()
@@ -105,6 +102,14 @@ class Frontier:
             frontierList.append(left)
         return frontierList
 
+    def getBlankLocation(self):
+        for i in range(0, len(self.parent.state)):
+            if self.parent.state[i] == 'b':
+                x = i // self.dimension
+                y = i % self.dimension
+                break
+        return (x, y)
+
     def twoDBoard(self):
         # returns a 2d board
         return [list(self.parent.state[i:i+self.dimension]) for i in range(0, len(self.parent.state), self.dimension)]
@@ -148,9 +153,27 @@ class Search:
                     continue
                 if self.root.state[cindex] > self.root.state[iindex]:
                     inversions += 1
-        if inversions % 2 == 0:
-            return True
-        return False
+
+        # For the 8-puzzle, we need even inversions
+        # For the 15-puzzle, we need the blank to be on an even row counting from the bottom AND an odd number of inversions
+        # OR the blank is on an odd row and number of inversions is equal. I found the rules online.
+        if len(self.root.state) == 9:
+            if inversions % 2 == 0:
+                return True
+            return False
+        elif len(self.root.state) == 16:
+            x, y = Frontier(self.root).getBlankLocation()
+            if x == 0 or x == 2:
+                if inversions % 2 == 0:
+                    return False
+                return True
+            elif x == 1 or x == 3:
+                if inversions % 2 == 0:
+                    return True
+                return False
+        else:
+            print("Puzzle is not an 8-puzzle nor 15-puzzle")
+            return False
 
 
 ########################################################################################
@@ -168,17 +191,20 @@ class BestFirst(Search):
 
     # Returns true if we're in the goal state. False otherwise
     def goalStateCheck(self, board):
-        goal = ''.join([str(i) for i in range(
-            1, self.dimension*self.dimension)] + ['b'])
+        goal = [str(i) for i in range(
+            1, self.dimension*self.dimension)] + ['b']
         for i in range(0, len(goal)):
             if goal[i] != board[i]:
                 return False
         return True
 
-    def search(self):
-        return self.privSearch(self.root)
+    def search(self, moveLimit):
+        if not self.isSolvable():
+            print("This board does not have a solution")
+            return
+        return self.privSearch(self.root, moveLimit)
 
-    def privSearch(self, root):
+    def privSearch(self, root, moveLimit):
         visited = [self.root.state]
         if self.goalStateCheck(root.state):
             currentRoot = root
@@ -189,23 +215,23 @@ class BestFirst(Search):
             path.append(self.root.state)
             for i in path[::-1]:
                 print(i)
+            print("The number of nodes explored is:", len(visited))
             return visited
 
-        moveLimit = 1000
         while len(self.nodeQueue) != 0 and moveLimit > 0:
             self.nodeQueue.sort()
             lowCost = self.nodeQueue.pop(0)
             if ''.join(lowCost.state) in visited:
                 continue
-            visited.append(''.join(lowCost.state))
+            visited.append(' '.join(lowCost.state))
             if self.goalStateCheck(lowCost.state):
                 currentRoot = lowCost
                 path = []
 
                 while currentRoot != self.root:
-                    path.append(''.join(currentRoot.state))
+                    path.append(' '.join(currentRoot.state))
                     currentRoot = currentRoot.parent
-                path.append(self.root.state)
+                path.append(' '.join(self.root.state))
 
                 for i in range(len(path)-1, 0, -1):
                     print(path[i], ' --> ', sep='', end='')
@@ -216,9 +242,31 @@ class BestFirst(Search):
                     self.nodeQueue += [node]
             moveLimit -= 1
 
-        print("Solution was not found within 1000 actions\nVisited nodes:")
+        print("Solution was not found within 1000 actions")
         return visited
 
 
 if __name__ == '__main__':
-    BestFirst(Node('152b43786')).search()
+
+    ######################################################################################################
+    # Instructions to run:                                                                               #
+    # 1. Create a root node with a 1d 8- or 15-puzzle. In order to minimize confusion with double digits,#
+    # pass in an array of chars.                                                                         #
+    #            example: Node(['1','2','3','4','5','6','7','8','b'])                                    #
+    #                                                                                                    #
+    # 2. Wrap the Node with the search algorithm (Your choices are 'A_', 'BestFirst', and '__________')  #
+    #            example: BestFirst(Node(['1','2','3','4','5','6','7','8','b']))                         #
+    #                                                                                                    #
+    # 3. Call the search function, specifying the maximum number of actions before erroring out. If we   #
+    # want maximum 1000 actions,                                                                         #
+    #            example: BestFirst(Node(['1','2','3','4','5','6','7','8','b'])).search(1000)            #
+    #                                                                                                    #
+    ######################################################################################################
+    # The return value is an array containing all visited nodes. Internally, the function will print     #
+    # the path it took to get to the goal and the number of states explored OR it will display some      #
+    # kind of error.                                                                                     #
+    ######################################################################################################
+
+    # BestFirst(Node('513b27684')).search(1000)
+    # BestFirst(Node(['1', '2', '3', '4', '5', '6', '7', '8',
+    #                '9', 'b', '15', '11', '13', '10', '14', '12'])).search(1000)
