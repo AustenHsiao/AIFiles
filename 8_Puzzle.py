@@ -13,14 +13,22 @@ class Node:
         self.action = action
         self.cost = cost
 
+    # set up the sort() function
+    def __lt__(self, node):
+        return self.cost < node.cost
+
 
 ########################################################################################
 # Frontier class will hold the frontier nodes. sqDimension refers to one dimension of
 # the square grid (3 for the 8-puzzle, 4 for the 15-puzzle)
 ########################################################################################
 class Frontier:
-    def __init__(self, inputState, sqDimension):
-        self.dimension = sqDimension
+    def __init__(self, inputState):
+        if len(inputState.state) == 9:
+            self.dimension = 3
+        else:
+            self.dimension = 4
+
         self.parent = inputState
         # Find location of the blank space in 2d
         for i in range(0, len(inputState.state)):
@@ -49,7 +57,9 @@ class Frontier:
             self.rows[self.x][self.y] = self.rows[topx][self.y]
             self.rows[topx][self.y] = 'b'
 
-            top = Node(self.flatBoard(self.rows), self.parent, 'top', 1)
+            topBoard = self.flatBoard(self.rows)
+            top = Node(topBoard, self.parent, 'top',
+                       self.correctSpaceCost(topBoard))
 
             # undo changes
             self.rows[topx][self.y] = self.rows[self.x][self.y]
@@ -61,7 +71,9 @@ class Frontier:
             self.rows[self.x][self.y] = self.rows[botx][self.y]
             self.rows[botx][self.y] = 'b'
 
-            bot = Node(self.flatBoard(self.rows), self.parent, 'bot', 1)
+            botBoard = self.flatBoard(self.rows)
+            bot = Node(botBoard, self.parent, 'bot',
+                       self.correctSpaceCost(botBoard))
 
             self.rows[botx][self.y] = self.rows[self.x][self.y]
             self.rows[self.x][self.y] = 'b'
@@ -71,7 +83,9 @@ class Frontier:
             self.rows[self.x][self.y] = self.rows[self.x][righty]
             self.rows[self.x][righty] = 'b'
 
-            right = Node(self.flatBoard(self.rows), self.parent, 'right', 1)
+            rightBoard = self.flatBoard(self.rows)
+            right = Node(rightBoard, self.parent, 'right',
+                         self.correctSpaceCost(rightBoard))
 
             self.rows[self.x][righty] = self.rows[self.x][self.y]
             self.rows[self.x][self.y] = 'b'
@@ -81,7 +95,9 @@ class Frontier:
             self.rows[self.x][self.y] = self.rows[self.x][lefty]
             self.rows[self.x][lefty] = 'b'
 
-            left = Node(self.flatBoard(self.rows), self.parent, 'left', 1)
+            leftBoard = self.flatBoard(self.rows)
+            left = Node(leftBoard, self.parent, 'left',
+                        self.correctSpaceCost(leftBoard))
 
             self.rows[self.x][lefty] = self.rows[self.x][self.y]
             self.rows[self.x][self.y] = 'b'
@@ -99,6 +115,15 @@ class Frontier:
         for i in board:
             flat += i
         return flat
+
+    # correctSpaceCost() gives a cost based on the number of tiles in the correct space, the goal is '12345678b'
+    def correctSpaceCost(self, board):
+        cost = 0
+        goal = [i for i in range(1, self.dimension*self.dimension)] + ['b']
+        for i in range(0, self.dimension*self.dimension):
+            if goal[i] != board[i]:
+                cost += 1
+        return cost
 
 
 ########################################################################################
@@ -134,9 +159,66 @@ class Search:
 class BestFirst(Search):
     def __init__(self, startState):
         super().__init__(startState)
+        # this is only good for 8-puzzle and 15 puzzle
+        if len(startState.state) == 9:
+            self.dimension = 3
+        else:
+            self.dimension = 4
+        self.nodeQueue = Frontier(startState).locations()
+
+    # Returns true if we're in the goal state. False otherwise
+    def goalStateCheck(self, board):
+        goal = ''.join([str(i) for i in range(
+            1, self.dimension*self.dimension)] + ['b'])
+        for i in range(0, len(goal)):
+            if goal[i] != board[i]:
+                return False
+        return True
+
+    def search(self):
+        return self.privSearch(self.root)
+
+    def privSearch(self, root):
+        visited = [self.root.state]
+        if self.goalStateCheck(root.state):
+            currentRoot = root
+            path = []
+            while currentRoot != self.root:
+                path.append(currentRoot.state)
+                currentRoot = currentRoot.parent
+            path.append(self.root.state)
+            for i in path[::-1]:
+                print(i)
+            return visited
+
+        moveLimit = 1000
+        while len(self.nodeQueue) != 0 and moveLimit > 0:
+            self.nodeQueue.sort()
+            lowCost = self.nodeQueue.pop(0)
+            if ''.join(lowCost.state) in visited:
+                continue
+            visited.append(''.join(lowCost.state))
+            if self.goalStateCheck(lowCost.state):
+                currentRoot = lowCost
+                path = []
+
+                while currentRoot != self.root:
+                    path.append(''.join(currentRoot.state))
+                    currentRoot = currentRoot.parent
+                path.append(self.root.state)
+
+                for i in range(len(path)-1, 0, -1):
+                    print(path[i], ' --> ', sep='', end='')
+                print(path[0], sep='')
+                return visited
+            for node in Frontier(lowCost).locations():
+                if ''.join(node.state) not in visited:
+                    self.nodeQueue += [node]
+            moveLimit -= 1
+
+        print("Solution was not found within 1000 actions\nVisited nodes:")
+        return visited
 
 
 if __name__ == '__main__':
-    root = Node('b12345678')
-    for i in Frontier(root, 3).locations():
-        print(''.join(i.state))
+    BestFirst(Node('152b43786')).search()
