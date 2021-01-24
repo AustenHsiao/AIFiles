@@ -217,6 +217,18 @@ class BestFirst(Search):
                 print(i)
             print("The number of nodes explored is:", len(visited))
             return visited
+        # Up until here is basically to check if our starting state IS the goal state
+
+        # If the starting state is NOT the goal state, we proceed below.
+        # For each node in the frontier (sorted by cost), (1)we pop the first
+        # node, (2)check to see if we have seen it before and skip if we have,
+        # (3)check to see if the frontier node is the goal state
+
+        # If we find the goal state, we transition to printing out the path,
+        # which just keeps calling the parent nodes until we find the original root
+
+        # This is really easy to write recursively, but without memoization or tabular
+        # method, it hits the recursion limit real fast
 
         while len(self.nodeQueue) != 0 and moveLimit > 0:
             self.nodeQueue.sort()
@@ -264,7 +276,7 @@ if __name__ == '__main__':
     ######################################################################################################
     # The return value is an array containing all visited nodes. Internally, the function will print     #
     # the path it took to get to the goal and the number of states explored OR it will display some      #
-    # kind of error.                                                                                     #
+    # kind of error message.                                                                                     #
     ######################################################################################################
 
     # BestFirst(Node('513b27684')).search(1000)
