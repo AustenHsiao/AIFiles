@@ -245,77 +245,85 @@ class Search:
 # The BestFirst class is derived from Search. BestFirst algorithm
 ########################################################################################
 class BestFirst(Search):
-    def __init__(self, startState):
+    def __init__(self, startState, heuristic):
         super().__init__(startState)
-        self.nodeQueue = Frontier(startState).locations(self.correctSpaceCost)
+        self.heuristic = heuristic
+        self.nodeQueue = Frontier(startState).locations(heuristic)
 
     def search(self, moveLimit):
         if not self.isSolvable():
             print("This board does not have a solution")
             return
-        return self.privSearch(self.root, moveLimit, self.correctSpaceCost)
-
-    # correctSpaceCost() gives a cost based on the number of tiles in the correct space, the goal is '12345678b'
-    @staticmethod
-    def correctSpaceCost(board, dimension):
-        cost = 0
-        goal = [i for i in range(1, dimension*dimension)] + ['b']
-        for i in range(0, dimension*dimension):
-            if goal[i] != board[i]:
-                cost += 1
-        return cost
-
+        return self.privSearch(self.root, moveLimit, self.heuristic)
 
 ########################################################################################
 # The AStar class is derived from Search. A* algorithm has a different costFunction
 ########################################################################################
+
+
 class AStar(Search):
-    def __init__(self, startState):
+    def __init__(self, startState, heuristic):
         super().__init__(startState)
+        self.heuristic = heuristic
+        self.nodeQueue = Frontier(startState).locations(heuristic)
 
-        self.nodeQueue = Frontier(startState).locations(self.sumCost)
+    def search(self, moveLimit):
+        if not self.isSolvable():
+            print("This board does not have a solution")
+            return
+        return self.privSearch(self.root, moveLimit, self.heuristic)
 
-    # in the BestFirst algorithm, I defined the cost as the number of non-matching tiles
-    # so I have to create a different one here. costToGoal() adds up the distance between
-    # every tile's current position and goal position
+
+########################################################################################
+# The h class contains all of the heuristics
+########################################################################################
+class h:
+
+    # Returns the number of non-matching tiles (when compared to the goal state)
+    @staticmethod
+    def first(board, dimension):
+        cost = 0
+        goal = [i for i in range(1, dimension * dimension)] + ['b']
+        for i in range(0, dimension * dimension):
+            if goal[i] != board[i]:
+                cost += 1
+        return cost
+
+    # adds up the distance between every tile's current position and goal position
     #  1  2  3
     #  4  b  6  has a cost of 4, because 'b' is 2 spaces away from the bottom right
     #  7  8  5  and 5 is also 2 spaces away from the middle
-    def costToGoal(self, board):
+    @staticmethod
+    def second(board, dimension):
         cost = 0
 
         goalPositions = {}
         x, y = 0, 0
-        for i in range(0, (self.dimension * self.dimension)):
+        for i in range(0, (dimension * dimension)):
             goalPositions[str(i)] = (x, y)
             y += 1
-            if y == self.dimension:
+            if y == dimension:
                 x += 1
                 y = 0
-        goalPositions['b'] = (self.dimension-1, self.dimension-1)
+        goalPositions['b'] = (dimension-1, dimension-1)
 
         boardArray = []
-        for i in range(self.dimension):
+        for i in range(dimension):
             boardArray.append(
-                board[i*self.dimension:i*self.dimension+self.dimension])
+                board[i * dimension:i * dimension + dimension])
 
-        for x in range(0, self.dimension):
-            for y in range(0, self.dimension):
+        for x in range(0, dimension):
+            for y in range(0, dimension):
                 goal = goalPositions[str(boardArray[x][y])]
                 delx = abs(x-goal[0])
                 dely = abs(y-goal[1])
                 cost += (delx + dely)
         return cost
 
-    # returns total cost, sum of BestFirst and A* cost functions
-    def sumCost(self, board, dimension):
-        return BestFirst.correctSpaceCost(board, dimension) + self.costToGoal(board)
-
-    def search(self, moveLimit):
-        if not self.isSolvable():
-            print("This board does not have a solution")
-            return
-        return self.privSearch(self.root, moveLimit, self.sumCost)
+    # Returns the sum of the first and second heuristics
+    @staticmethod
+    def third(board, dimension):
+        return h.first(board, dimension) + h.second(board, dimension)
 
 
 if __name__ == '__main__':
@@ -327,12 +335,13 @@ if __name__ == '__main__':
     #            example: Node(['1','2','3','4','5','6','7','8','b'])                                    #
     #            example: Node('12345678b')                                                              #
     #                                                                                                    #
-    # 2. Wrap the Node with the search algorithm (Your choices are 'A_', 'BestFirst', and '__________')  #
-    #            example: BestFirst(Node(['1','2','3','4','5','6','7','8','b']))                         #
+    # 2. Wrap the Node with the search algorithm (Your choices are 'AStar' or 'BestFirst') AND heuristic #
+    # -- choices for heuristic are h.first, h.second, or h.third.                                        #
+    #            example: BestFirst(Node(['1','2','3','4','5','6','7','8','b']), h.first)                #
     #                                                                                                    #
-    # 3. Call the search function, specifying the maximum number of actions before erroring out. If we   #
-    # want maximum 1000 actions,                                                                         #
-    #            example: BestFirst(Node(['1','2','3','4','5','6','7','8','b'])).search(1000)            #
+    # 3. Call the search function, specifying the maximum number of actions before erroring out and the  #
+    # heuristic. If we want maximum 1000 actions,                                                        #
+    #            example: BestFirst(Node(['1','2','3','4','5','6','7','8','b']), h.first).search(1000)   #
     #                                                                                                    #
     ######################################################################################################
     # The return value is an array containing all visited nodes. Internally, the function will print     #
@@ -340,7 +349,7 @@ if __name__ == '__main__':
     # kind of error message.                                                                             #
     ######################################################################################################
 
-    BestFirst(Node('1234b6758')).search(1000)
-    AStar(Node('1234b6758')).search(1000)
+    #BestFirst(Node('1234b6758'), h.first).search(1000)
+    #AStar(Node('1234b6758'), h.third).search(1000)
     # BestFirst(Node(['1', '2', '3', '4', '5', '6', '7', '8',
     #                '9', 'b', '15', '11', '13', '10', '14', '12'])).search(1000)
