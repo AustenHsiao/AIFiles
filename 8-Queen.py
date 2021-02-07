@@ -6,8 +6,11 @@ r.seed()
 
 class QueenGA:
     def __init__(self, PopulationSize, NumIterations, filename):
+        if PopulationSize > 500000:
+            print("Choose a population less than 500000")
+            exit()
+
         with open(filename, 'w') as fp:
-            print("Running generation 0")
             # initial parents and fitness
             parents = self.original_parents(PopulationSize)
             fitness = self.fitness(parents)
@@ -21,7 +24,7 @@ class QueenGA:
                             for fit in fitness]
 
             # Do everything for the rest of the iterations
-            for i in range(1, NumIterations):
+            for i in range(0, NumIterations):
                 print("Running generation", i)
                 next_parents = []
                 for ii in range(0, PopulationSize):
@@ -30,7 +33,19 @@ class QueenGA:
                     next_gen = r.choices(parents, weights=weights_list, k=2)
                     parent1 = next_gen[0]
                     parent2 = next_gen[1]
-                    next_parents.append(self.breed(parent1, parent2))
+                    # ENABLE THIS IF YOU DONT WANT BOTH PARENTS TO BE THE SAME BOARD
+                    # while parent1 == parent2:
+                    #    parent2 = r.choices(parents, weights=weights_list)[0]
+                    child = self.breed(parent1, parent2)
+
+                    # ENABLE THIS IF YOU DONT WANT DUPLICATE CHILDREN IN THE NEXT GENERATION
+                    # There's a chance we get stuck here if the population size is higher
+                    # than the number of combinations. So I've limited the population size
+                    # to 500000
+                    # while child in next_parents:
+                    #    child = self.breed(parent1, parent2)
+
+                    next_parents.append(child)
                 fitness = self.fitness(next_parents)
 
                 # overwrite the last generation's parents--we don't need it anymore
@@ -45,7 +60,14 @@ class QueenGA:
                 weights_list = [(fit * 1.0 / normalization_value)
                                 for fit in fitness]
 
-        print("END")
+        final_children = [(parents[i], fitness[i])
+                          for i in range(len(parents))]
+        final_children = sorted(final_children, key=lambda x: x[1])
+        parent1 = final_children.pop()
+        parent2 = final_children.pop()
+
+        print("Final Parent1:", parent1[0], " ", parent1[1], "\nFinal Parent2:",
+              parent2[0], " ", parent2[1], "\nEND")
 
     # takes in a number (size of parent population) for the initial
     # generation. This is generated randomly. Each parent is going to be a list
@@ -54,8 +76,15 @@ class QueenGA:
     def original_parents(self, PopulationSize):
         parents = []
         for i in range(PopulationSize):
-            parents.append([(r.randint(0, 7), r.randint(0, 7))
-                            for queens in range(8)])
+            parent = []
+            for queens in range(8):
+                proposed_x = r.randint(0, 7)
+                proposed_y = r.randint(0, 7)
+                while (proposed_x, proposed_y) in parent:
+                    proposed_x = r.randint(0, 7)
+                    proposed_y = r.randint(0, 7)
+                parent.append((proposed_x, proposed_y))
+            parents.append(parent)
         return parents
 
     # returns an array containing the fitness for each parent in the passed array.
@@ -64,10 +93,15 @@ class QueenGA:
         return [self.single_parent_fitness(chromosome) for chromosome in parents]
 
     # returns the fitness for a single parent
-    # checks to see if any thing can attack in all directions
+    # In the trivial case, if we have any repeats, this means that multiple queens occupy the same
+    # spot. This can't happen, so it gets assigned a bad fitness.
+    # Otherwise it checks to see if any thing can attack in all directions
     # (2x horizontal, 2x vertical, 4x diagonal)
     # Fitness is defined as 100 - (sum of the number of queens that can attack each queen)
     def single_parent_fitness(self, parent):
+        if len(set(parent)) < len(parent):
+            return -8
+
         attackers = 0
         for queen in parent:
             x = queen[0]
@@ -122,4 +156,4 @@ class QueenGA:
 
 
 if __name__ == '__main__':
-    QueenGA(1000, 1000, "test_1000_1000.txt")
+    QueenGA(1000, 1000, "printouttest_1000_1000_1.txt")
