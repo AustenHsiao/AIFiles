@@ -24,7 +24,7 @@ class QueenGA:
                             for fit in fitness]
 
             # Do everything for the rest of the iterations
-            for i in range(0, NumIterations):
+            for i in range(1, NumIterations):
                 print("Running generation", i)
                 next_parents = []
                 for ii in range(0, PopulationSize):
@@ -156,4 +156,4 @@ class QueenGA:
 
 
 if __name__ == '__main__':
-    QueenGA(1000, 1000, "printouttest_1000_1000_1.txt")
+    QueenGA(500, 2000, "pop500_iter2000.txt")
