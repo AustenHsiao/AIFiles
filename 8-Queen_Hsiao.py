@@ -13,7 +13,7 @@ class QueenGA:
             fitness = self.fitness(parents)
             fp.write("0 " + str(sum(fitness)*1.0 / len(fitness)) +
                      " " + str(max(fitness)) + '\n')
-            print("gen 0 " + str(sum(fitness)*1.0 / len(fitness)))
+            #print("gen 0 " + str(sum(fitness)*1.0 / len(fitness)))
 
             for generation in range(1, numIterations):
                 next_parents = []
@@ -22,13 +22,19 @@ class QueenGA:
                     next_gen = r.choices(parents, weights=fitness, k=2)
                     parent1 = next_gen[0]
                     parent2 = next_gen[1]
-                    next_parents.append(self.breed(parent1, parent2))
+                    child = self.breed(parent1, parent2)
+                    next_parents.append(child)
                 parents = next_parents
                 fitness = self.fitness(parents)
                 fp.write(str(generation) + " " + str(sum(fitness)*1.0 /
                                                      len(fitness)) + " " + str(max(fitness)) + '\n')
-                print("gen" + str(generation) + " " +
-                      str(sum(fitness)*1.0 / len(fitness)))
+                # print("gen" + str(generation) + " " +
+                # str(sum(fitness)*1.0 / len(fitness)))
+                if generation == 1 or generation % 200 == 0:
+                    print("Generation " + str(generation) + ": " + str(parent1) +
+                          " + " + str(parent2) + " => " + str(child))
+        print("Generation " + str(generation) + ": " + str(parent1) +
+              " + " + str(parent2) + " => " + str(child))
         print("End")
 
     # creates the initial set of parents. Each parent is a list of 8 integers between 0 and 7.
@@ -81,6 +87,8 @@ class QueenGA:
 if __name__ == '__main__':
     #QueenGA(10, 1000, "Pop10_Iter1000.txt")
     #QueenGA(100, 1000, "Pop100_Iter1000.txt")
-    #QueenGA(500, 3000, "Pop500_Iter3000.txt")
-    QueenGA(1000, 1000, "Pop1000_Iter1000_2.txt")
+    #QueenGA(500, 1000, "Pop500_Iter1000.txt")
+    #QueenGA(1000, 1000, "Pop1000_Iter1000.txt")
+    #QueenGA(1000, 3000, "Pop1000_Iter3000.txt")
     #QueenGA(1000, 500, "Pop1000_Iter500.txt")
+    QueenGA(500, 1000, "example500_1000.txt")
