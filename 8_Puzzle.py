@@ -360,7 +360,7 @@ if __name__ == '__main__':
 # 8-puzzle
 # BEST-FIRST
 # Heuristic1- Flat cost = 1
-    # BestFirst(input1).search(1000)
+    BestFirst(input1).search(1000)
     # BestFirst(input2).search(1000)
     # BestFirst(input3).search(1000)
     # BestFirst(input4).search(1000)

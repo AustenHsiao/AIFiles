@@ -1,2 +1,0 @@
-Filenames are written in the format: test_x_y.txt where x = Population size (size of each generation) and y = NumIterations (number of generations)
-Within each file, the 3 columns are: (1) generation number, (2) average fitness, (3) maximum fitness
