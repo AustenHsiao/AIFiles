@@ -105,33 +105,55 @@ class QLearn:
         # 4
         nextState = grid.checkSensor()
         # 5
-        self.qTable[currentState][action] = self.qTable[currentState][action] + self.learningRate * (reward + self.discountFactor *
-                                                                                                     max(self.qTable[nextState]) - self.qTable[currentState][action])
+        self.qTable[currentState][action] = self.qTable[currentState][action] + self.learningRate * (reward + (self.discountFactor *
+                                                                                                               max(self.qTable[nextState])) - self.qTable[currentState][action])
         return reward
 
     def train(self):
+        with open("QLearningData.txt", 'w') as fp:  # Change filename here for reg analysis
+            data = []
+            epsilon = 0.8
+            for episode in range(self.episodes):
+                grid = Robby()
+                reward = 0
+                if episode % 50 and episode != 0:
+                    epsilon -= 0.0002
+                    if epsilon < 0:
+                        epsilon = 0
+                for step in range(self.steps):
+                    reward += self.greedyMove(grid, epsilon)
+                # print this out for regression stats
+                fp.write("{ep} {re}".format(ep=episode, re=reward))
+
+                if episode % 100 == 0:
+                    data.append((episode, reward))
+
+            x = [i[0] for i in data]
+            y = [i[1] for i in data]
+            plt.scatter(x, y)
+            plt.xlabel('Episode')
+            plt.ylabel('Total Reward')
+            plt.title('Training Reward')
+            plt.savefig('TrainingReward_EPSILON08.png')
+
+    def run(self):
         data = []
         epsilon = 0.1
         for episode in range(self.episodes):
             grid = Robby()
             reward = 0
-            if episode % 50 and episode != 0:
-                epsilon -= 0.0005
-                if epsilon < 0:
-                    epsilon = 0
             for step in range(self.steps):
                 reward += self.greedyMove(grid, epsilon)
-            if episode % 100 == 0:
-                data.append((episode, reward))
+            data.append(reward)
+        data = np.array(data)
+        print("Test-Average:", np.average(data),
+              "\nTest-StdDev:", np.std(data))
 
-        x = [i[0] for i in data]
-        y = [i[1] for i in data]
-        plt.scatter(x, y)
-        plt.xlabel('Episode')
-        plt.ylabel('Total Reward')
-        plt.title('Training Reward')
-        plt.savefig('TrainingReward.png')
+    # Run all
+    def full(self):
+        self.train()
+        self.run()
 
 
 if __name__ == '__main__':
-    QLearn().train()
+    QLearn().full()
