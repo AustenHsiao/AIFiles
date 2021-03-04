@@ -123,7 +123,10 @@ class QLearn:
                 reward += self.greedyMove(grid, epsilon)
             if episode % 100 == 0:
                 data.append((episode, reward))
-        plt.scatter(data[0], data[1])
+
+        x = [i[0] for i in data]
+        y = [i[1] for i in data]
+        plt.scatter(x, y)
         plt.xlabel('Episode')
         plt.ylabel('Total Reward')
         plt.title('Training Reward')
